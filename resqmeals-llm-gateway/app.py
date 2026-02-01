@@ -141,27 +141,58 @@ Message:
     out = call_llm(system, user)
     return jsonify({"json": _force_json(out)})
 
-@app.post("/llm/rank_charities")
+@app.route("/llm/rank_charities", methods=["POST"])
 def rank_charities():
-    payload = request.get_json(force=True)
-    donation = payload.get("donation", {})
-    candidates = payload.get("candidates", [])
+    data = request.json
 
-    system = "You rank candidate charities for a food donation. Return ONLY valid JSON."
-    user = f"""
-Donation JSON:
-{json.dumps(donation, ensure_ascii=False)}
+    donation = data.get("donation")
+    candidates = data.get("candidates", [])
 
-Candidates JSON array:
-{json.dumps(candidates, ensure_ascii=False)}
+    prompt = f"""
+You are ranking charities for food donation.
 
-Return JSON:
-ranked_charities: array of objects
-  {{charity_id: string, score_0_100: number, reasons: [string], concerns: [string]}}
-""".strip()
+Donation:
+{donation}
 
-    out = call_llm(system, user)
-    return jsonify({"json": _force_json(out)})
+Candidates:
+{candidates}
+
+Return JSON only in this format:
+
+{{
+  "ranked": [
+    {{"id":"...","name":"...","score":0.0,"reason":"..."}}
+  ]
+}}
+"""
+
+    llm_resp = call_llm(prompt)
+
+    try:
+        # Try parse JSON
+        parsed = json.loads(llm_resp)
+
+        if "ranked" not in parsed:
+            raise ValueError("Missing ranked key")
+
+        return jsonify(parsed)
+
+    except Exception as e:
+
+        # Fallback: auto-rank by first entry
+        fallback = {
+            "ranked": [
+                {
+                    "id": candidates[0].get("_id"),
+                    "name": candidates[0].get("name"),
+                    "score": 1.0,
+                    "reason": "Fallback ranking"
+                }
+            ]
+        }
+
+        return jsonify(fallback)
+
 
 @app.post("/llm/draft_driver_message")
 def draft_driver_message():
