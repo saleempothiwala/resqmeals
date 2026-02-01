@@ -143,55 +143,72 @@ Message:
 
 @app.route("/llm/rank_charities", methods=["POST"])
 def rank_charities():
-    data = request.json
-
+    data = request.get_json(force=True)
     donation = data.get("donation")
     candidates = data.get("candidates", [])
 
-    prompt = f"""
-You are ranking charities for food donation.
+    system = "You are a dispatch assistant that ranks charities for food rescue."
+    user = f"""
+Rank these candidate charities for the donation below.
 
-Donation:
-{donation}
+Donation (JSON):
+{json.dumps(donation, ensure_ascii=False)}
 
-Candidates:
-{candidates}
+Candidates (JSON list):
+{json.dumps(candidates, ensure_ascii=False)}
 
-Return JSON only in this format:
+Return JSON only with this schema:
 
 {{
   "ranked": [
-    {{"id":"...","name":"...","score":0.0,"reason":"..."}}
+    {{"id":"<candidate _id>","name":"<candidate name>","score":0.0,"reason":"short reason"}}
   ]
 }}
+
+Rules:
+- Prefer charities that accept the food type.
+- Prefer larger max_radius_miles.
+- Prefer charities whose hours are open at pickup_deadline if hours exist.
+- Keep reason under 20 words.
 """
 
-    llm_resp = call_llm(prompt)
+    raw = call_llm(system, user)
+
+    # Normalize output. Always return {"ranked":[...]} even if model misbehaves.
+    def _coerce(obj):
+        if isinstance(obj, str):
+            obj = obj.strip()
+            obj = json.loads(obj)
+
+        if isinstance(obj, dict) and "ranked" not in obj:
+            if "json" in obj:
+                return _coerce(obj["json"])
+            if "text" in obj:
+                return _coerce(obj["text"])
+
+        if isinstance(obj, dict) and "ranked" in obj and isinstance(obj["ranked"], list):
+            return obj
+
+        raise ValueError("rank_charities: bad format")
+
+    def _fallback():
+        ranked = []
+        for c in candidates:
+            ranked.append({
+                "id": c.get("_id"),
+                "name": c.get("name"),
+                "score": 1.0,
+                "reason": "Fallback ranking"
+            })
+        return {"ranked": ranked}
 
     try:
-        # Try parse JSON
-        parsed = json.loads(llm_resp)
-
-        if "ranked" not in parsed:
-            raise ValueError("Missing ranked key")
-
-        return jsonify(parsed)
-
-    except Exception as e:
-
-        # Fallback: auto-rank by first entry
-        fallback = {
-            "ranked": [
-                {
-                    "id": candidates[0].get("_id"),
-                    "name": candidates[0].get("name"),
-                    "score": 1.0,
-                    "reason": "Fallback ranking"
-                }
-            ]
-        }
-
-        return jsonify(fallback)
+        out = _coerce(raw)
+        if not out.get("ranked"):
+            out = _fallback()
+        return jsonify(out)
+    except Exception:
+        return jsonify(_fallback())
 
 
 @app.post("/llm/draft_driver_message")
