@@ -8,6 +8,11 @@ from datetime import datetime, timezone
 
 app = Flask(__name__)
 
+@app.errorhandler(Exception)
+def handle_error(e):
+    return jsonify({"error": str(e), "type": type(e).__name__}), 500
+
+
 @app.get("/__routes")
 def __routes():
     return jsonify(sorted([rule.rule for rule in app.url_map.iter_rules()]))
