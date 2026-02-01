@@ -140,8 +140,6 @@ DEFAULT_RESTAURANT_ID
 DEFAULT_ACCEPT_LINK
 
 
-Create `.env.example` files for local development. Never commit secrets.
-
 ---
 
 ## 🐳 Build & Deploy
