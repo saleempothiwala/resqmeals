@@ -196,9 +196,7 @@ Data:
     })
 
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "8080"))
-    app.run(host="0.0.0.0", port=port)
+
 
 
 def _safe_parse_json(text: str):
@@ -267,3 +265,8 @@ def audit_log():
 
     out = cloudant_put(db, doc)
     return jsonify(out)
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "8080"))
+    app.run(host="0.0.0.0", port=port)
