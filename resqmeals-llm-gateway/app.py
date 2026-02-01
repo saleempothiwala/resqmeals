@@ -259,6 +259,21 @@ def _safe_parse_json(text: str):
     except Exception:
         return None, t
 
+@app.get("/audit/recent")
+def audit_recent():
+    db = os.environ.get("CLOUDANT_DB_AUDIT", "resqmeals_audit")
+    limit = int(request.args.get("limit", "20"))
+
+    # Find all audit docs. For small demo dataset this is fine.
+    # If you want sorting by created_at later, add an index and sort fields.
+    out = cloudant_find(
+        db,
+        {"type": "audit"},
+        limit=limit,
+        fields=["_id","created_at","restaurant_id","status","restaurant_message","selected_charity","selected_driver"]
+    )
+    return jsonify(out)
+
 
 @app.get("/data/charities")
 def charities():
