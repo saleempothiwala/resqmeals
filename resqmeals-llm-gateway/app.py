@@ -8,6 +8,11 @@ from datetime import datetime, timezone
 
 app = Flask(__name__)
 
+@app.get("/__routes")
+def __routes():
+    return jsonify(sorted([rule.rule for rule in app.url_map.iter_rules()]))
+
+
 def _env(name: str) -> str:
     v = os.environ.get(name)
     if not v:
@@ -214,8 +219,14 @@ def charities():
         vals = [v.strip() for v in accepts.split(",") if v.strip()]
         sel["accepts"] = {"$in": vals}
 
-    out = cloudant_find(db, sel, limit=50, fields=["_id","name","accepts","max_radius_miles","address","hours","capacity_notes","geo"])
+    out = cloudant_find(
+        db,
+        sel,
+        limit=50,
+        fields=["_id","name","accepts","max_radius_miles","address","hours","capacity_notes","geo"]
+    )
     return jsonify(out)
+
 
 @app.get("/data/drivers")
 def drivers():
