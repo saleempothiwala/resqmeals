@@ -1,23 +1,45 @@
-Food Waste Reduction Solution
+# ResQMeals
+**Tagline:** Rescuing surplus meals with agentic AI.
 
-Our solution utilizes a multi-agent architecture to reduce food waste by connecting restaurants with excess food to charities in need. The system leverages Granite, a natural language processing tool, to extract structured data from raw text inputs.
+## Solution Overview
+Our solution reduces food waste by efficiently connecting restaurants with excess food to charities in need. The system utilizes a multi-agent architecture and leverages **Granite** (IBM watsonx.ai) to enable seamless data extraction, matching, and dispatching from raw natural language inputs.
 
-Agent Architecture
+---
 
-Our architecture consists of four agents:
+## Agent Architecture
+Our architecture consists of four specialized agents that collaborate to complete a food rescue:
 
-Dispatcher Agent: The only agent that interacts with the restaurant, responsible for owning the state machine and calling other agents/tools.
-Intake Agent: Calls the extract_donation tool to parse raw text into structured JSON, validates required fields, and asks follow-up questions if necessary.
-Matching Agent: Calls the find_candidates tool to perform a deterministic geo-radius filter and the rank_charities tool to pick the top 3 matches using LLM reasoning.
-Dispatch Agent: Creates jobs for drivers in the Driver Console, monitors acceptance, and generates receipts with legal disclaimers.
-Tools Used
+| Agent | Responsibility |
+| :--- | :--- |
+| **Dispatcher Agent** | The lead coordinator. Owns the state machine and manages the end-to-end lifecycle. |
+| **Intake Agent** | Data specialist. Parses raw text into structured JSON and validates required fields. |
+| **Matching Agent** | Analyst. Performs geo-radius filtering and ranks charities with explainable reasoning. |
+| **Dispatch Agent** | Logistician. Creates driver jobs, monitors acceptance, and generates legal receipts. |
 
-Each agent uses the following tools:
+---
 
-Dispatcher Agent: audit_log to record every state transition in Cloudant for auditability.
-Intake Agent: extract_donation to parse raw text into structured JSON using watsonx.ai (Granite).
-Matching Agent: find_candidates and rank_charities to perform deterministic filtering and LLM-based ranking.
-Dispatch Agent: create_job, job_status, and generate_receipt to manage the Driver Console workflow, monitor acceptance, and draft receipts.
-Solution Overview
+## Tools & Technology Stack
+Each agent is powered by specific tools hosted on **IBM Code Engine** and backed by **IBM Cloudant**:
 
-Our solution reduces food waste by efficiently connecting restaurants with excess food to charities in need. The system's multi-agent architecture and use of Granite enable seamless data extraction, matching, and dispatching.
+### 1. Dispatcher Agent
+* **audit_log**: Records every state transition in Cloudant for full auditability and demo replay.
+
+### 2. Intake Agent
+* **extract_donation**: Uses **watsonx.ai (Granite)** to parse raw text into structured JSON.
+* **Follow-up Logic**: Automatically detects missing fields and requests clarification from the user.
+
+### 3. Matching Agent
+* **find_candidates**: Performs a deterministic geo-radius filter against the charity directory.
+* **rank_charities**: Uses LLM reasoning to select the top 3 matches based on charity-specific intake rules.
+
+### 4. Dispatch Agent
+* **create_job**: Interface with the Driver Console to alert the volunteer pool.
+* **job_status**: Monitors driver acceptance via polling or webhooks.
+* **generate_receipt**: Uses LLM to draft final receipts including mandatory legal disclaimers.
+
+---
+
+## The "Listen, Reason, Act" Flow
+1. **Listen:** Restaurant enters a message (e.g., "20 trays of pasta at 123 Main St").
+2. **Reason:** Granite extracts data, classifies food, and ranks charities with reasons.
+3. **Act:** Orchestrate tools query Cloudant, alert drivers, and generate the final documentation.
